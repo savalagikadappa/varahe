@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np
+from sqlalchemy import create_engine
 
 
 def clean_data():
@@ -18,7 +18,6 @@ def clean_data():
 
     df["Turnout_Percentage"] = (df["Valid_Votes"] / df["Electors"]) * 100
     df["Turnout_Percentage"] = df["Turnout_Percentage"].fillna(0).round(2)
-
     df.loc[df["Turnout_Percentage"] > 100, "Turnout_Percentage"] = 100
 
     text_cols = [
@@ -71,7 +70,24 @@ def clean_data():
 
     df_clean.to_csv("cleaned_election_data.csv", index=False)
     print("Data cleaning complete. Filtered for 1991-2019.")
+    return df_clean
+
+
+def store_data_postgresql(df):
+    user = "kadappa"
+    password = "kadappa"
+    host = "localhost"
+    port = "5432"
+    database = "varahe"
+
+    engine = create_engine(
+        f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
+    )
+
+    df.to_sql("election_data", engine, if_exists="replace", index=False)
+    print("Data stored in PostgreSQL table 'election_data'.")
 
 
 if __name__ == "__main__":
-    clean_data()
+    df_clean = clean_data()
+    store_data_postgresql(df_clean)
