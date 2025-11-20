@@ -26,7 +26,7 @@ export const VoteShareChart = ({ query }) => {
       title="Top parties by vote share"
       subtitle="Based on filtered constituencies (sampled up to 500 races)."
     >
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <PieChart>
           <Pie data={query.data || []} dataKey="voteShare" nameKey="party" innerRadius={70} outerRadius={120}>
             {(query.data || []).map((entry, index) => (

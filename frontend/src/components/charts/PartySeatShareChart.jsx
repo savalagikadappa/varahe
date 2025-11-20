@@ -67,7 +67,7 @@ export const PartySeatShareChart = ({ query }) => {
       title="Party seat share by year"
       subtitle="Stacked bars showcase how parliamentary seats shift between parties."
     >
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <BarChart data={chartData.rows} stackOffset="expand">
           <XAxis dataKey="year" tick={{ fontSize: 12 }} />
           <YAxis hide />

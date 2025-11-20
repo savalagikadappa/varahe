@@ -72,10 +72,7 @@ const getGenderRepresentation = async (req, res, next) => {
       WITH gender_counts AS (
         SELECT
           "Year" AS year,
-          CASE
-            WHEN "Sex" IS NULL OR "Sex" = '' THEN 'UNKNOWN'
-            ELSE UPPER("Sex")
-          END AS sex,
+          "Sex" AS sex,
           COUNT(*) AS candidates
         FROM election_data
         ${whereClause}
@@ -141,9 +138,89 @@ const getMarginDistribution = async (req, res, next) => {
   }
 };
 
+
+
+const getVoteShare = async (req, res, next) => {
+  try {
+    const { where, values, range } = buildYearClause(req.query.year);
+
+    // We want total votes per party
+    const query = `
+      SELECT
+        "Party" AS party,
+        SUM("Votes") AS total_votes
+      FROM election_data
+      ${where}
+      GROUP BY "Party"
+      ORDER BY total_votes DESC
+    `;
+
+    const { rows } = await db.query(query, values);
+
+    // Calculate total votes across all parties to compute percentage
+    const totalVotesAll = rows.reduce((sum, r) => sum + Number(r.total_votes), 0);
+
+    const data = rows.map(r => ({
+      party: r.party,
+      votes: Number(r.total_votes),
+      voteShare: totalVotesAll ? Number(((Number(r.total_votes) / totalVotesAll) * 100).toFixed(2)) : 0
+    }));
+
+    // Return top 8 + others
+    const top8 = data.slice(0, 8);
+    const others = data.slice(8).reduce((acc, curr) => {
+      acc.votes += curr.votes;
+      acc.voteShare += curr.voteShare;
+      return acc;
+    }, { party: 'Others', votes: 0, voteShare: 0 });
+
+    if (others.votes > 0) {
+      others.voteShare = Number(others.voteShare.toFixed(2));
+      top8.push(others);
+    }
+
+    return res.json({ meta: { yearRange: range || null }, data: top8 });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getEducationAnalysis = async (req, res, next) => {
+  try {
+    const { where, values, range } = buildYearClause(req.query.year);
+    const whereClause = where ? `${where} AND "MyNeta_education" IS NOT NULL AND "MyNeta_education" != 'UNKNOWN'` : 'WHERE "MyNeta_education" IS NOT NULL AND "MyNeta_education" != \'UNKNOWN\'';
+
+    const query = `
+      SELECT
+        "MyNeta_education" AS education,
+        COUNT(*) AS total_candidates,
+        SUM(CASE WHEN "Is_Winner" = true THEN 1 ELSE 0 END) AS winners
+      FROM election_data
+      ${whereClause}
+      GROUP BY "MyNeta_education"
+      ORDER BY total_candidates DESC
+    `;
+
+    const { rows } = await db.query(query, values);
+
+    const data = rows.map(row => ({
+      education: row.education,
+      candidates: Number(row.total_candidates),
+      winners: Number(row.winners),
+      win_percentage: Number(row.total_candidates) ? Number(((Number(row.winners) / Number(row.total_candidates)) * 100).toFixed(2)) : 0
+    }));
+
+    return res.json({ meta: { yearRange: range || null }, data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   getTurnoutByState,
   getPartySeatShare,
   getGenderRepresentation,
-  getMarginDistribution
+  getMarginDistribution,
+  getVoteShare,
+  getEducationAnalysis
 };

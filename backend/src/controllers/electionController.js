@@ -39,7 +39,9 @@ const getElections = async (req, res, next) => {
         "Margin",
         "Position",
         "Is_Winner",
-        "Party_Type_TCPD"
+        "Is_Winner",
+        "Party_Type_TCPD",
+        "MyNeta_education"
       FROM election_data
       ${whereClause}
       ${sortableClause}

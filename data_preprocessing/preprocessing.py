@@ -27,10 +27,22 @@ def clean_data():
         "Candidate",
         "Sex",
         "Candidate_Type",
+        "MyNeta_education",
     ]
     for col in text_cols:
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip().str.upper()
+
+    # Normalize Sex column to only 4 values: MALE, FEMALE, O, UNKNOWN
+    df["Sex"] = df["Sex"].replace({
+        "M": "MALE",
+        "F": "FEMALE",
+        "NOTA": "UNKNOWN",
+        "NAN": "UNKNOWN"
+    })
+    # Ensure only valid values remain
+    valid_sex_values = ["MALE", "FEMALE", "O", "UNKNOWN"]
+    df.loc[~df["Sex"].isin(valid_sex_values), "Sex"] = "UNKNOWN"
 
     df["State_Name"] = df["State_Name"].replace(
         {
@@ -63,6 +75,7 @@ def clean_data():
         "Position",
         "Is_Winner",
         "Party_Type_TCPD",
+        "MyNeta_education",
     ]
 
     existing_cols = [c for c in cols_to_keep if c in df.columns]

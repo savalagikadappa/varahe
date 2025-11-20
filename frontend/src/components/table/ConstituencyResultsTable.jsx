@@ -35,7 +35,7 @@ export const ConstituencyResultsTable = () => {
   );
   const [pageState, setPageState] = useState({ key: filterKey, value: 1 });
   const page = pageState.key === filterKey ? pageState.value : 1;
-  const [limit, setLimit] = useState(50);
+  const [limit, setLimit] = useState(10);
   const [sort, setSort] = useState({ key: 'Year', direction: 'desc' });
 
   const query = useQuery({
@@ -98,7 +98,7 @@ export const ConstituencyResultsTable = () => {
         <label>
           Rows per page
           <select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
-            {[25, 50, 100].map((size) => (
+            {[10, 25, 50, 100].map((size) => (
               <option key={size} value={size}>
                 {size}
               </option>
@@ -121,8 +121,8 @@ export const ConstituencyResultsTable = () => {
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map((row) => (
-              <tr key={`${row.Year}-${row.Constituency_No}-${row.Candidate}`}>
+            {sortedRows.map((row, index) => (
+              <tr key={`${row.Year}-${row.State_Name}-${row.Constituency_No}-${row.Candidate}-${index}`}>
                 <td>{row.Year}</td>
                 <td>{row.State_Name}</td>
                 <td>{row.Constituency_Name}</td>

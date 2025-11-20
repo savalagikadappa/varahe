@@ -48,11 +48,18 @@ export const useDashboardData = () => {
     placeholderData: []
   });
 
+  const educationQuery = useQuery({
+    queryKey: ['education', yearKey],
+    queryFn: () => electionApi.getEducationAnalysis(filters),
+    placeholderData: []
+  });
+
   return {
     seatShareQuery,
     turnoutQuery,
     genderQuery,
     marginQuery,
-    voteShareQuery
+    voteShareQuery,
+    educationQuery
   };
 };

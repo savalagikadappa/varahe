@@ -40,14 +40,15 @@ export const GenderRepresentationChart = ({ query }) => {
 
   return (
     <Card title="Gender representation" subtitle="% of candidates across genders">
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <LineChart data={rows} margin={{ left: 20, right: 20 }}>
           <XAxis dataKey="year" tick={{ fontSize: 12 }} />
           <YAxis unit="%" tick={{ fontSize: 12 }} domain={[0, 100]} />
           <Tooltip formatter={(value) => `${value}%`} />
           <Legend />
-          <Line type="monotone" dataKey="M" name="Male" stroke="#6366F1" strokeWidth={3} dot={false} />
-          <Line type="monotone" dataKey="F" name="Female" stroke="#EC4899" strokeWidth={3} dot={false} />
+          <Line type="monotone" dataKey="MALE" name="Male" stroke="#6366F1" strokeWidth={4} dot={false} />
+          <Line type="monotone" dataKey="FEMALE" name="Female" stroke="#EC4899" strokeWidth={8} dot={false} />
+          <Line type="monotone" dataKey="O" name="Other" stroke="#10B981" strokeWidth={3} dot={false} />
           <Line type="monotone" dataKey="UNKNOWN" name="Unknown" stroke="#94A3B8" strokeWidth={3} dot={false} />
         </LineChart>
       </ResponsiveContainer>

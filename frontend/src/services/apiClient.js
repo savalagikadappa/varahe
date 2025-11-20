@@ -71,26 +71,26 @@ const applyClientFilters = (records, filters) => {
 export const electionApi = {
   async getPartySeatShare(filters) {
     const params = { year: buildYearParam(filters.yearRange) };
-  const { data } = await api.get('/party/seat-share', { params });
-  return data.data || [];
+    const { data } = await api.get('/party/seat-share', { params });
+    return data.data || [];
   },
 
   async getTurnoutByState(filters) {
     const params = { year: buildYearParam(filters.yearRange) };
-  const { data } = await api.get('/turnout/by-state', { params });
-  return data.data || [];
+    const { data } = await api.get('/turnout/by-state', { params });
+    return data.data || [];
   },
 
   async getGenderRepresentation(filters) {
     const params = { year: buildYearParam(filters.yearRange) };
-  const { data } = await api.get('/gender/representation', { params });
-  return data.data || [];
+    const { data } = await api.get('/gender/representation', { params });
+    return data.data || [];
   },
 
   async getMarginDistribution(filters) {
     const params = { year: buildYearParam(filters.yearRange) };
-  const { data } = await api.get('/margin-distribution', { params });
-  return data.data || [];
+    const { data } = await api.get('/margin-distribution', { params });
+    return data.data || [];
   },
 
   async getElections({ filters, page = 1, limit = 100 }) {
@@ -117,30 +117,14 @@ export const electionApi = {
       limit: 500,
       page: 1
     };
-    const { data } = await api.get('/elections', { params });
-    const relevant = applyClientFilters(data.data, filters);
+    const { data } = await api.get('/party/vote-share', { params });
+    return data.data || [];
+  },
 
-    const aggregated = relevant.reduce((acc, row) => {
-      const party = row.Party || 'Other';
-      const stats = acc.get(party) || { party, votes: 0, seats: 0 };
-      stats.votes += Number(row.Votes) || 0;
-      if (row.Is_Winner) {
-        stats.seats += 1;
-      }
-      acc.set(party, stats);
-      return acc;
-    }, new Map());
-
-    const totalVotes = Array.from(aggregated.values()).reduce((sum, party) => sum + party.votes, 0) || 1;
-    const sorted = Array.from(aggregated.values())
-      .map((party) => ({
-        ...party,
-        voteShare: Number(((party.votes / totalVotes) * 100).toFixed(2))
-      }))
-      .sort((a, b) => b.voteShare - a.voteShare)
-      .slice(0, 8);
-
-    return sorted;
+  async getEducationAnalysis(filters) {
+    const params = { year: buildYearParam(filters.yearRange) };
+    const { data } = await api.get('/analysis/education', { params });
+    return data.data || [];
   },
 
   async searchCandidates(query) {

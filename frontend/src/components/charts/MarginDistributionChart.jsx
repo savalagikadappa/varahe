@@ -22,7 +22,7 @@ export const MarginDistributionChart = ({ query }) => {
 
   return (
     <Card title="Margin of victory distribution" subtitle="Buckets highlight nail-biters vs blowouts">
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <BarChart data={(query.data || []).map((bucket) => ({ ...bucket, races: Number(bucket.races) }))}>
           <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />

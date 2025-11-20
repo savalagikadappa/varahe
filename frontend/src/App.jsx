@@ -4,6 +4,7 @@ import { TurnoutChart } from './components/charts/TurnoutChart.jsx';
 import { GenderRepresentationChart } from './components/charts/GenderRepresentationChart.jsx';
 import { MarginDistributionChart } from './components/charts/MarginDistributionChart.jsx';
 import { VoteShareChart } from './components/charts/VoteShareChart.jsx';
+import { EducationChart } from './components/charts/EducationChart.jsx';
 import { ConstituencyResultsTable } from './components/table/ConstituencyResultsTable.jsx';
 import { CandidateSearch } from './components/search/CandidateSearch.jsx';
 import { useDashboardData } from './hooks/useDashboardData.js';
@@ -21,6 +22,7 @@ const App = () => {
         <TurnoutChart query={dashboard.turnoutQuery} />
         <GenderRepresentationChart query={dashboard.genderQuery} />
         <MarginDistributionChart query={dashboard.marginQuery} />
+        <EducationChart query={dashboard.educationQuery} />
       </div>
       <ConstituencyResultsTable />
       <CandidateSearch />
