@@ -1,0 +1,24 @@
+
+.appWrapper {
+  min-height: 100vh;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 5vw, 4rem) 4rem;
+  background: #ffffff;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.chartGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+@media (max-width: 768px) {
+  .appWrapper {
+    padding: 1.5rem;
+  }
+}

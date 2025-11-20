@@ -1,0 +1,199 @@
+.panel {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 40px 80px -40px rgba(15, 23, 42, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.panelHeader h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+}
+
+.panelHeader p {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+}
+
+.resetButton {
+  border: none;
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.yearBlock {
+  background: var(--surface-muted);
+  padding: 1rem;
+  border-radius: 20px;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.rangeInputs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.rangeInputs input {
+  flex: 1;
+}
+
+.rangeNumbers {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.rangeNumbers input {
+  width: 100px;
+  border: none;
+  background: white;
+  padding: 0.4rem 0.6rem;
+  border-radius: 12px;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.textInput {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--surface-muted);
+  font-size: 0.95rem;
+}
+
+.suggestionList {
+  list-style: none;
+  padding: 0.5rem;
+  margin: 0.5rem 0 0;
+  background: var(--surface-muted);
+  border-radius: 16px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.suggestionList li button {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.genderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.genderOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.genderChip {
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.genderActive {
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.toggleRow {
+  background: var(--surface-muted);
+  border-radius: 20px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle {
+  width: 56px;
+  height: 30px;
+  border-radius: 999px;
+  border: none;
+  background: var(--border-subtle);
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  overflow: hidden;
+}
+
+.toggle[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 35%, #ffffff);
+}
+
+.toggleThumb,
+.toggleThumbOn {
+  position: absolute;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  left: 3px;
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.toggleThumbOn {
+  transform: translateX(22px);
+}
+
+@media (max-width: 768px) {
+  .panel {
+    padding: 1.25rem;
+  }
+}
