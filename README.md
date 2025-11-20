@@ -1,919 +1,444 @@
 # 🗳️ Varahe - Indian Election Data Visualization Dashboard
 
-A full-stack analytics platform for exploring Indian General Elections (1991-2019) using interactive visualizations, real-time filtering, and comprehensive data insights.
+A full-stack analytics platform for exploring Indian General Elections (1991–2019) using interactive visualizations, advanced filtering, and a PostgreSQL-backed API.
 
-![Tech Stack](https://img.shields.io/badge/React-18-blue) ![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue) ![Python](https://img.shields.io/badge/Python-3.10+-yellow)
+***
 
----
+### Table of Contents
+- Features
+- Architecture & Tech Stack
+- Data & Preprocessing
+- Local Setup (Backend, Frontend, DB)
+- API Reference
+- Dashboard Modules
+- Project Structure
+- Troubleshooting
+- Production Deployment
+- License & Acknowledgments
 
-## 📋 Table of Contents
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Prerequisites](#-prerequisites)
-- [Quick Start Guide](#-quick-start-guide)
-- [API Documentation](#-api-documentation)
-- [Dashboard Components](#-dashboard-components)
-- [Data Processing](#-data-processing)
-- [Project Structure](#-project-structure)
-- [Troubleshooting](#-troubleshooting)
+***
 
----
+## Features
 
-## ✨ Features
+### Core Analytics
 
-### 📊 **6 Interactive Visualizations**
-1. **Party Seat Share** - Stacked bar chart showing seat distribution across parties per year
-2. **State Turnout Map** - Interactive India choropleth map + horizontal bar chart
-3. **Gender Representation** - Line chart tracking male/female/other candidate percentages
-4. **Vote Share Distribution** - Donut chart of top parties by total votes
-5. **Victory Margins** - Histogram showing close races vs landslides
-6. **Constituency Results** - Sortable, paginated table with candidate search
+- **6 interactive visualizations**: party seat share, turnout map, gender representation, vote share, victory margins, and constituency-level table.[3][1]
+- **End-to-end drilldowns** from national trends → state → constituency → candidate history using shared filters and search.[4][1]
+- **Temporal analysis** over 8 Lok Sabha elections (1991–2019), enabling longitudinal comparisons of parties, turnout, and representation.[1][3]
 
-### 🔍 **Advanced Filtering**
-- Year range slider (1991-2019)
-- Multi-select state and party filters
-- Gender category chips (Male, Female, Other, Unknown)
-- Constituency name search
-- Winners-only toggle
+### Filtering & UX
 
-### 🚀 **Performance Features**
-- React Query caching for instant chart updates
-- Debounced search inputs
-- Pagination for large result sets
-- Responsive design (desktop/tablet/mobile)
+- **Global filter panel**: year range, state multi-select, party multi-select, gender chips, winners-only toggle, constituency search.[2][4]
+- **Fast UX**: React Query caching, debounced text inputs, pagination for large result sets, and responsive layout for mobile/desktop.[5][6]
+- **Accessible UI**: keyboard-focusable controls, semantic loading and error states, and clear empty-state messaging for charts and tables.[7][5]
 
----
+***
 
-## 🛠️ Tech Stack
+## Architecture & Tech Stack
 
-| Layer | Technologies |
-|-------|-------------|
-| **Frontend** | React 18, Vite, TailwindCSS, Recharts, React Query, React Simple Maps |
-| **Backend** | Node.js 18+, Express 5, PostgreSQL 14+, Joi validation |
-| **Data Processing** | Python 3.10+, Pandas, SQLAlchemy, psycopg2 |
-| **Dev Tools** | ESLint, Git, npm, nodemon |
+### High-Level Architecture
 
----
+- **Data layer**: Lok Dhaba candidate-level election data loaded into PostgreSQL (`election_data` table).[3][1]
+- **Backend API**: Node.js + Express, parameterized SQL with `pg`, validation via Joi, exposed as `/api/*` endpoints.[8][9]
+- **Frontend**: React 18 + Vite dashboard consuming the backend via a configurable `VITE_API_BASE_URL`.[6][5]
 
-## 📦 Prerequisites
+### Tech Stack Details
 
-Before you begin, ensure you have the following installed:
+| Layer      | Technologies                                                                                |
+|-----------|---------------------------------------------------------------------------------------------|
+| Frontend  | React 18, Vite, TailwindCSS, Recharts, React Query, React Simple Maps, React Select        |
+| Backend   | Node.js 18+, Express 5, PostgreSQL 14+, `pg`, Joi, CORS                                     |
+| Data      | Python 3.10+, Pandas, SQLAlchemy, psycopg2                                                  |
+| Tooling   | ESLint, nodemon, Git, npm                                                                   |  
 
-| Tool | Version | Installation Guide |
-|------|---------|-------------------|
-| **Node.js** | 18+ | [Download](https://nodejs.org/) or use `nvm install 18` |
-| **PostgreSQL** | 14+ | [Download](https://www.postgresql.org/download/) or `brew install postgresql` (Mac) / `sudo apt install postgresql` (Linux) |
-| **Python** | 3.10+ | [Download](https://www.python.org/downloads/) |
-| **Git** | Latest | [Download](https://git-scm.com/downloads) |
+[5][6]
 
-### Verify Installations
-```bash
-node --version   # Should show v18 or higher
-npm --version    # Should show 8+
-psql --version   # Should show 14+
-python3 --version # Should show 3.10+
-```
+***
 
----
+## Data & Preprocessing
 
-## 🚀 Quick Start Guide
+### Dataset
 
-### Step 1: Clone the Repository
+- **Source**: Lok Dhaba (TCPD, Ashoka University), candidate-level Lok Sabha data.[4][1]
+- **Temporal coverage**: General Elections 1991–2019, filtered from the full Lok Dhaba dataset.[10][3]
+- **Granularity**: One row per candidate–constituency–year with votes, electors, turnout, party, gender, margins, and TCPD party metadata.[3][4]
+
+### Preprocessing Pipeline (`data_preprocessing/preprocessing.py`)
+
+The script performs the following operations before loading into PostgreSQL:[10][3]
+
+1. **Year filter**: keep elections with `Year ∈ [1991, 2019]`.[10][3]
+2. **Gender cleanup**: normalize to `MALE`, `FEMALE`, `O`, `UNKNOWN` and fill missing as `UNKNOWN`.[11][3]
+3. **Party normalization**: fill missing parties as `INDEPENDENT` and uppercase all party labels.[4][3]
+4. **Numeric coercion**: convert votes, electors, margins to integers; blanks become `0`.[3][10]
+5. **Turnout recomputation**: `Turnout_Percentage = (Valid_Votes / Electors) × 100` with capping at 100.[10][3]
+6. **Text standardization**: uppercase state/constituency/candidate names, strip whitespace, normalize legacy state names.[4][3]
+7. **Vote share**: compute `Vote_Share_Percentage` per candidate in each constituency.[3][10]
+8. **Winner flag**: set `Is_Winner = true` where `Position = 1`, else `false`.[4][3]
+9. **Export & load**: write `cleaned_election_data.csv` and bulk-load into PostgreSQL table `election_data`.[10][3]
+
+### Database Schema (`election_data`)
+
+Typical columns (aligned with the Lok Dhaba codebook):[3][4]
+
+| Column                 | Type      | Description                                   |
+|------------------------|-----------|-----------------------------------------------|
+| Year                   | INTEGER   | Election year (1991–2019)                    |
+| State_Name             | VARCHAR   | Normalized state name                        |
+| Constituency_Name      | VARCHAR   | Constituency name                            |
+| Constituency_No        | INTEGER   | Constituency number                          |
+| Party                  | VARCHAR   | Candidate party abbreviation                 |
+| Candidate              | VARCHAR   | Candidate name                               |
+| Sex                    | VARCHAR   | `MALE`, `FEMALE`, `O`, `UNKNOWN`             |
+| Votes                  | INTEGER   | Candidate votes                              |
+| Valid_Votes            | INTEGER   | Valid votes in constituency                  |
+| Electors               | INTEGER   | Registered voters                            |
+| Turnout_Percentage     | NUMERIC   | Turnout in percent                           |
+| Vote_Share_Percentage  | NUMERIC   | Candidate’s vote share (%)                   |
+| Margin                 | INTEGER   | Victory margin for winners                   |
+| Position               | INTEGER   | Rank (1 = winner)                            |
+| Is_Winner              | BOOLEAN   | True if rank = 1                             |
+| Party_Type_TCPD        | VARCHAR   | Party classification by TCPD                 |
+| MyNeta_education       | VARCHAR   | Education level (if available)               |  
+
+[4][3]
+
+***
+
+## Local Setup
+
+### 1. Clone Repository
+
 ```bash
 git clone https://github.com/yourusername/varahe.git
 cd varahe
 ```
 
-### Step 2: Set Up PostgreSQL Database
 
-**Option A: Using psql (Recommended)**
-```bash
-# Start PostgreSQL service
-sudo service postgresql start  # Linux
-brew services start postgresql # macOS
+### 2. Prepare PostgreSQL
 
-# Create database and user
-psql postgres
-```
+1. Start PostgreSQL using your OS-specific method.[12][9]
+2. Create database and user (choose your own secure credentials):[8][9]
 
-In the PostgreSQL prompt:
 ```sql
 CREATE DATABASE varahe;
-CREATE USER kadappa WITH PASSWORD 'kadappa';
-GRANT ALL PRIVILEGES ON DATABASE varahe TO kadappa;
-\q
+CREATE USER varahe_user WITH PASSWORD 'your_strong_password';
+GRANT ALL PRIVILEGES ON DATABASE varahe TO varahe_user;
 ```
 
-**Option B: Using pgAdmin**
-- Open pgAdmin
-- Right-click "Databases" → Create → Database
-- Name: `varahe`
-- Owner: Create user `kadappa` with password `kadappa`
+3. Optionally verify: `psql -l | grep varahe`. [9][12]  
 
-### Step 3: Process and Import Data
+### 3. Prepare Dataset
+
+1. Download the Lok Sabha CSV from Lok Dhaba and save as `data_preprocessing/All_States_GE.csv`.[1][4]
+2. (Recommended) create virtual environment and install dependencies:[10][3]
 
 ```bash
 cd data_preprocessing
-
-# Create Python virtual environment
 python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # Mac/Linux
-# OR
-venv\Scripts\activate     # Windows
-
-# Install Python dependencies
+source venv/bin/activate       # Windows: venv\Scripts\activate
 pip install pandas sqlalchemy psycopg2-binary
+```
 
-# Run preprocessing script (cleans CSV and loads into PostgreSQL)
+3. Configure DB credentials in `preprocessing.py` (host, port, db name, user, password) but never commit real secrets.[12][9]
+4. Run preprocessing and import:[3][10]
+
+```bash
 python3 preprocessing.py
 ```
 
-**Expected Output:**
-```
-Data cleaning complete. Filtered for 1991-2019.
-Data stored in PostgreSQL table 'election_data'.
+5. Alternative manual import (after generating `cleaned_election_data.csv`):[4][3]
+
+```sql
+\copy election_data FROM 'cleaned_election_data.csv' CSV HEADER;
 ```
 
-**Note:** If you see errors, verify your database credentials in `preprocessing.py` (lines 79-83):
-```python
-user = "kadappa"
-password = "kadappa"
-host = "localhost"
-port = "5432"
-database = "varahe"
-```
-
-### Step 4: Configure Backend
+### 4. Backend API
 
 ```bash
-cd ../backend
-
-# Install Node.js dependencies
-npm install
-
-# Create environment file
+cd backend
 cp .env.example .env
+npm install
+npm run dev
 ```
 
-**Edit `.env` file** (if your database credentials differ):
+
+**.env (example – customize locally, never commit real passwords):**[12][9]
+
 ```env
+NODE_ENV=development
 PORT=4000
+
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=kadappa
-DB_PASSWORD=kadappa
 DB_NAME=varahe
+DB_USER=varahe_user
+DB_PASSWORD=your_strong_password
 DB_SSL=false
 ```
 
-**Start Backend Server:**
+**Health check:**  
+
 ```bash
-npm run dev
+curl "http://localhost:4000/api/elections?limit=1"
 ```
 
-**Expected Output:**
-```
-Server running on http://localhost:4000
-Database connected!
-```
 
-**Test Backend:**
-```bash
-# In a new terminal
-curl http://localhost:4000/api/elections?limit=1
-# Should return JSON with 1 election record
-```
-
-### Step 5: Configure Frontend
+### 5. Frontend Dashboard
 
 ```bash
 cd ../frontend
-
-# Install dependencies
 npm install
-
-# Create environment file (optional - uses default http://localhost:4000)
 echo "VITE_API_BASE_URL=http://localhost:4000/api" > .env.local
-
-# Start development server
 npm run dev
 ```
 
-**Expected Output:**
-```
-  VITE v5.x.x  ready in 500 ms
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-```
+Open: `http://localhost:5173` in a browser.[5][6]
 
-### Step 6: Access Dashboard
+***
 
-Open your browser and navigate to:
-```
-http://localhost:5173
-```
+## API Reference
 
-You should see the dashboard with all charts loaded! 🎉
+Base URL (local):  
 
----
-
-## 📡 API Documentation
-
-### Base URL
-```
+```text
 http://localhost:4000/api
 ```
 
-### Endpoints
 
-#### 1. **GET /elections** - Paginated Election Records
+### 1. `GET /elections` – Paginated Election Records
 
-**Description:** Fetch election records with optional filters
+- **Description**: Candidate-level records with filters and pagination.[3][4]
+- **Query params**:[4][3]
+  - `year`: `"2019"` or `"2014-2019"`  
+  - `state_name`: e.g. `"Karnataka"`  
+  - `party`: e.g. `"BJP"`, `"INC"`  
+  - `sex`: `MALE`, `FEMALE`, `O`, `UNKNOWN`  
+  - `constituency_name`: string match  
+  - `page`: page number (default `1`)  
+  - `limit`: page size (default `100`)  
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `year` | string | Single year or range | `2019` or `2014-2019` |
-| `state_name` | string | State name (case-insensitive) | `Karnataka` |
-| `party` | string | Party abbreviation | `BJP`, `INC` |
-| `sex` | string | Gender filter | `MALE`, `FEMALE`, `O`, `UNKNOWN` |
-| `constituency_name` | string | Constituency name | `Bangalore North` |
-| `page` | integer | Page number (default: 1) | `2` |
-| `limit` | integer | Records per page (default: 100) | `50` |
+**Example:**  
 
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/elections?year=2019&state_name=Karnataka&limit=20'
+curl "http://localhost:4000/api/elections?year=2019&state_name=Karnataka&limit=20"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "total": 234,
-    "page": 1,
-    "limit": 20
-  },
-  "data": [
-    {
-      "Year": 2019,
-      "State_Name": "KARNATAKA",
-      "Constituency_Name": "BANGALORE NORTH",
-      "Candidate": "D. V. SADANANDA GOWDA",
-      "Party": "BJP",
-      "Sex": "MALE",
-      "Votes": 867862,
-      "Turnout_Percentage": 68.45,
-      "Vote_Share_Percentage": 56.23,
-      "Margin": 123456,
-      "Position": 1,
-      "Is_Winner": true
-    }
-  ]
-}
-```
 
----
+### 2. `GET /turnout/by-state` – State-wise Turnout
 
-#### 2. **GET /turnout/by-state** - State-wise Turnout Analysis
+- **Description**: Average turnout percentage per state for a given year or year range.[3][4]
+- **Params**: `year=2019` or `year=2004-2019`.[11][4]
 
-**Description:** Get average voter turnout percentage by state
+**Example:**
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `year` | string | Single year or range | `2014-2019` |
-
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/turnout/by-state?year=2019'
+curl "http://localhost:4000/api/turnout/by-state?year=2019"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "yearRange": { "from": 2019, "to": 2019 }
-  },
-  "data": [
-    {
-      "state": "ANDHRA PRADESH",
-      "avg_turnout": 79.73
-    },
-    {
-      "state": "KARNATAKA",
-      "avg_turnout": 69.25
-    }
-  ]
-}
-```
 
----
+### 3. `GET /party/seat-share` – Party Performance
 
-#### 3. **GET /party/seat-share** - Party Performance
+- **Description**: Seats won per party per year (winners only).[4][3]
+- **Params**: optional `year` range like `2009-2019`.[4][11]
 
-**Description:** Seats won by each party per election year
+**Example:**
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `year` | string | Year range (optional) | `2009-2019` |
-
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/party/seat-share?year=2014-2019'
+curl "http://localhost:4000/api/party/seat-share?year=2014-2019"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "yearRange": { "from": 2014, "to": 2019 }
-  },
-  "data": [
-    {
-      "year": 2019,
-      "party": "BJP",
-      "seats_won": 303
-    },
-    {
-      "year": 2019,
-      "party": "INC",
-      "seats_won": 52
-    }
-  ]
-}
-```
 
----
+### 4. `GET /gender/representation` – Gender Statistics
 
-#### 4. **GET /gender/representation** - Gender Statistics
+- **Description**: Candidate counts and percentages by gender across years.[3][4]
+- **Params**: optional `year` range, default is full 1991–2019 range.[4][3]
 
-**Description:** Percentage of candidates by gender over time
+**Example:**
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `year` | string | Year range (optional) | `1991-2019` |
-
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/gender/representation'
+curl "http://localhost:4000/api/gender/representation"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "yearRange": null
-  },
-  "data": [
-    {
-      "year": 2019,
-      "sex": "MALE",
-      "candidates": 8598,
-      "percentage": 93.67
-    },
-    {
-      "year": 2019,
-      "sex": "FEMALE",
-      "candidates": 581,
-      "percentage": 6.33
-    }
-  ]
-}
-```
 
----
+### 5. `GET /margin-distribution` – Victory Margin Histogram
 
-#### 5. **GET /margin-distribution** - Victory Margin Analysis
+- **Description**: Bucketed distribution of victory margins for winners.[4][3]
+- **Params**: optional `year` or `year` range.[4][4]
 
-**Description:** Distribution of victory margins in histogram buckets
+**Example:**
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `year` | string | Year range (optional) | `2019` |
-
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/margin-distribution?year=2019'
+curl "http://localhost:4000/api/margin-distribution?year=2019"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "yearRange": { "from": 2019, "to": 2019 }
-  },
-  "data": [
-    {
-      "bucket": "0-999",
-      "races": 12
-    },
-    {
-      "bucket": "1k-4.9k",
-      "races": 45
-    },
-    {
-      "bucket": "5k-9.9k",
-      "races": 89
-    },
-    {
-      "bucket": "10k-49.9k",
-      "races": 234
-    },
-    {
-      "bucket": "50k+",
-      "races": 165
-    }
-  ]
-}
-```
 
----
+### 6. `GET /search/candidates` – Candidate Search
 
-#### 6. **GET /search/candidates** - Candidate Search
+- **Description**: Text search over candidate names with aggregated career stats and per-election history.[11][3]
+- **Params**:[11][3]
+  - `q`: query string (min 2 characters)  
+  - `limit`: max result count (default `25`)  
 
-**Description:** Search candidates by name with full electoral history
+**Example:**
 
-**Query Parameters:**
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `q` | string | Search query (min 2 chars) | `Gandhi` |
-| `limit` | integer | Max results (default: 25) | `10` |
-
-**Example Request:**
 ```bash
-curl 'http://localhost:4000/api/search/candidates?q=Gandhi&limit=5'
+curl "http://localhost:4000/api/search/candidates?q=Gandhi&limit=5"
 ```
 
-**Response:**
-```json
-{
-  "meta": {
-    "query": "Gandhi",
-    "resultCount": 5
-  },
-  "data": [
-    {
-      "candidate_name": "RAHUL GANDHI",
-      "total_elections": 4,
-      "total_wins": 3,
-      "states": ["UTTAR PRADESH", "KERALA"],
-      "parties": ["INC"],
-      "history": [
-        {
-          "year": 2019,
-          "state": "KERALA",
-          "constituency": "WAYANAD",
-          "party": "INC",
-          "votes": 706367,
-          "position": 1,
-          "is_winner": true
-        }
-      ]
-    }
-  ]
-}
-```
 
----
+***
 
-## 📊 Dashboard Components
+## Dashboard Modules
 
-### Charts Overview
+### Chart & UI Components
 
-| Component | Type | Data Source | Purpose |
-|-----------|------|-------------|---------|
-| **PartySeatShareChart** | Stacked Bar | `/party/seat-share` | Show seat distribution by party/year |
-| **IndiaMap** | Choropleth | `/turnout/by-state` | Visualize state-wise turnout on map |
-| **TurnoutChart** | Horizontal Bar | `/turnout/by-state` | Compare turnout across states |
-| **GenderRepresentationChart** | Line Chart | `/gender/representation` | Track gender diversity trends |
-| **VoteShareChart** | Donut | `/elections` (aggregated) | Display top parties by vote % |
-| **MarginDistributionChart** | Histogram | `/margin-distribution` | Analyze victory margin ranges |
-| **ConstituencyResultsTable** | Table | `/elections` | Browse/search election records |
-| **CandidateSearch** | Cards | `/search/candidates` | Lookup candidate history |
+| Component                      | Type           | Backing Endpoint          | Purpose                                          |
+|-------------------------------|----------------|---------------------------|--------------------------------------------------|
+| `PartySeatShareChart`         | Stacked Bar    | `/party/seat-share`      | Seats by party and year                         |
+| `IndiaMap`                    | Choropleth Map | `/turnout/by-state`      | State-level turnout on a map                    |
+| `TurnoutChart`                | Horizontal Bar | `/turnout/by-state`      | Turnout comparison across states                |
+| `GenderRepresentationChart`   | Line Chart     | `/gender/representation` | Gender diversity over time                      |
+| `VoteShareChart`              | Donut          | `/elections` (aggregated)| Top parties by vote share in current filters    |
+| `MarginDistributionChart`     | Histogram      | `/margin-distribution`   | Close races vs landslides                       |
+| `ConstituencyResultsTable`    | Table          | `/elections`             | Detailed candidate-level results                 |
+| `CandidateSearch`             | Cards          | `/search/candidates`     | Candidate lookup with history                   |  
 
-### Filter Panel Features
-- **Year Range Slider:** Adjust election year range (1991-2019)
-- **State Multi-Select:** Filter by one or more states
-- **Party Multi-Select:** Filter by party abbreviations
-- **Gender Chips:** Toggle MALE, FEMALE, O, UNKNOWN
-- **Winners Toggle:** Show only winning candidates
-- **Constituency Search:** Find specific constituencies
+[13][5]
 
----
+### Filter Panel
 
-## 🔄 Data Processing
+- **Year range slider** for 1991–2019.[3][4]
+- **State & party multi-select** based on distinct values from the dataset.[1][4]
+- **Gender chips** (`MALE`, `FEMALE`, `O`, `UNKNOWN`) plus winners-only toggle.[11][3]
+- **Constituency search** with debounced input to avoid over-fetching.[14][5]
 
-### Preprocessing Steps Explained
+***
 
-The `data_preprocessing/preprocessing.py` script performs these operations:
+## Project Structure
 
-1. **Filtered Years:** Kept rows only where Year is between 1991 and 2019
-2. **Filled Missing Gender:** Replaced empty Sex values with "UNKNOWN"
-3. **Filled Missing Parties:** Replaced empty Party values with "INDEPENDENT"
-4. **Fixed Numbers:** Converted Votes, Electors, Margins to integers, replaced blanks with 0
-5. **Recalculated Turnout:** Computed `Turnout_Percentage = (Valid_Votes / Electors) × 100`
-6. **Capped Outliers:** Set any Turnout_Percentage over 100% back to 100
-7. **Standardized Text:** Converted all names, states, parties to UPPERCASE, removed extra spaces
-8. **Unified State Names:** Renamed old spellings (ORISSA → ODISHA, PONDICHERRY → PUDUCHERRY)
-9. **Normalized Gender:** M/MALE → MALE, F/FEMALE → FEMALE, NOTA → UNKNOWN
-10. **Calculated Vote Share:** Created `Vote_Share_Percentage` column for every candidate
-11. **Flagged Winners:** Created `Is_Winner` column (True/False) for Position 1 candidates
-12. **Exported Data:** Saved cleaned dataset to PostgreSQL `election_data` table
-
-### Database Schema
-
-**Table:** `election_data`
-
-| Column | Type | Description |
-|--------|------|-------------|
-| Year | INTEGER | Election year (1991-2019) |
-| State_Name | VARCHAR | State name (normalized) |
-| Constituency_Name | VARCHAR | Constituency name |
-| Constituency_No | INTEGER | Constituency number |
-| Party | VARCHAR | Party abbreviation (BJP, INC, etc.) |
-| Candidate | VARCHAR | Candidate name |
-| Sex | VARCHAR | Gender (MALE, FEMALE, O, UNKNOWN) |
-| Votes | INTEGER | Votes received by candidate |
-| Valid_Votes | INTEGER | Total valid votes in constituency |
-| Electors | INTEGER | Total registered voters |
-| Turnout_Percentage | NUMERIC | Voter turnout % |
-| Vote_Share_Percentage | NUMERIC | Candidate's vote share % |
-| Margin | INTEGER | Victory margin (for winners) |
-| Position | INTEGER | Candidate's rank (1 = winner) |
-| Is_Winner | BOOLEAN | True if Position = 1 |
-| Party_Type_TCPD | VARCHAR | National/Regional/State party |
-| MyNeta_education | VARCHAR | Candidate education level |
-
-**Total Records:** 64,748
-
----
-
-## 📁 Project Structure
-
-```
+```text
 varahe/
-├── backend/                    # Node.js Express API
+├── backend/
 │   ├── src/
-│   │   ├── app.js              # Express app configuration
-│   │   ├── server.js           # Server bootstrap
-│   │   ├── config/             # Environment config
-│   │   ├── controllers/        # API business logic
-│   │   │   ├── analyticsController.js    # Charts endpoints
-│   │   │   ├── electionController.js     # Elections CRUD
-│   │   │   └── searchController.js       # Candidate search
-│   │   ├── routes/             # Express routers
-│   │   ├── middleware/         # Validation & error handling
-│   │   ├── utils/              # Filter & pagination helpers
-│   │   ├── validation/         # Joi schemas
-│   │   └── db/                 # PostgreSQL connection pool
-│   ├── package.json
-│   └── .env.example
+│   │   ├── app.js               # Express app wiring
+│   │   ├── server.js            # Server bootstrap + DB readiness
+│   │   ├── config/              # Env and DB config
+│   │   ├── controllers/         # Business logic + SQL
+│   │   ├── routes/              # API route modules
+│   │   ├── middleware/          # Validation + error handling
+│   │   ├── utils/               # Filters, pagination helpers
+│   │   └── validation/          # Joi schemas
+│   └── package.json
 │
-├── frontend/                   # React Vite Dashboard
+├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── charts/         # Recharts visualizations
-│   │   │   │   ├── PartySeatShareChart.jsx
-│   │   │   │   ├── IndiaMap.jsx
-│   │   │   │   ├── TurnoutChart.jsx
-│   │   │   │   ├── GenderRepresentationChart.jsx
-│   │   │   │   ├── VoteShareChart.jsx
-│   │   │   │   └── MarginDistributionChart.jsx
-│   │   │   ├── table/          # Data table components
-│   │   │   ├── search/         # Candidate search
-│   │   │   └── common/         # Shared UI components
-│   │   ├── context/            # React Context (filters)
-│   │   ├── hooks/              # Custom hooks
-│   │   ├── services/           # API client
-│   │   └── utils/              # Formatters
-│   ├── package.json
-│   └── .env.local (create this)
+│   │   │   ├── charts/          # All Recharts components
+│   │   │   ├── table/           # Results table
+│   │   │   ├── search/          # Candidate search UI
+│   │   │   └── common/          # Shared UI (layout, inputs)
+│   │   ├── context/             # Global filter context
+│   │   ├── hooks/               # React Query hooks
+│   │   ├── services/            # API client wrappers
+│   │   └── utils/               # Formatting helpers
+│   └── package.json
 │
-├── data_preprocessing/         # Python data pipeline
-│   ├── preprocessing.py        # Data cleaning script
-│   ├── analyze.py              # Optional analysis script
-│   ├── All_States_GE.csv       # Raw dataset (download separately)
-│   ├── cleaned_election_data.csv  # Output CSV
-│   └── venv/                   # Python virtual environment
+├── data_preprocessing/
+│   ├── preprocessing.py         # Primary ETL script
+│   ├── analyze.py               # Optional ad-hoc analysis
+│   ├── All_States_GE.csv        # Raw dataset (not versioned here)
+│   ├── cleaned_election_data.csv# Derived output (local)
+│   └── venv/                    # Local virtual env (gitignored)
 │
-└── README.md                   # This file
+└── README.md
 ```
 
----
 
-## 🐛 Troubleshooting
+***
 
-### Common Issues & Solutions
+## Troubleshooting
 
-#### 1. **Database Connection Failed**
+### Database Connection Issues
 
-**Error:** `ECONNREFUSED` or `password authentication failed`
+- Ensure PostgreSQL is running and reachable on `DB_HOST:DB_PORT`.[16][19]
+- Confirm `DB_NAME`, `DB_USER`, `DB_PASSWORD` in `.env` match your local DB setup.[8][9]
+- Check privileges: `GRANT ALL PRIVILEGES ON DATABASE varahe TO your_user;`.[16][19]
 
-**Solution:**
-- Verify PostgreSQL is running: `sudo service postgresql status`
-- Check credentials in `backend/.env` match your database
-- Ensure database `varahe` exists: `psql -l | grep varahe`
-- Grant permissions: `GRANT ALL PRIVILEGES ON DATABASE varahe TO kadappa;`
+### Python / ETL Errors
 
-#### 2. **Python Dependencies Error**
+- `ModuleNotFoundError`: confirm venv is activated and dependencies installed.[10][3]
+- `FileNotFoundError: All_States_GE.csv`: ensure the CSV path and file name are correct.[1][4]
 
-**Error:** `ModuleNotFoundError: No module named 'pandas'`
+### Port Already in Use
 
-**Solution:**
-```bash
-cd data_preprocessing
-source venv/bin/activate  # Make sure venv is activated
-pip install --upgrade pip
-pip install pandas sqlalchemy psycopg2-binary
-```
+- Find and kill process: `lsof -ti:4000 | xargs kill -9` (Linux/macOS). [12][9]  
+- Or change `PORT` in backend `.env` and update frontend `VITE_API_BASE_URL`.[19][16]
 
-#### 3. **Port Already in Use**
+### Blank Charts or Errors in UI
 
-**Error:** `EADDRINUSE: address already in use :::4000`
+- Open browser dev tools and inspect failing API calls.[13][5]
+- Hit `http://localhost:4000/api/elections?limit=1` directly to confirm backend health.[8][9]
+- Check year and filter selections are not excluding all data.[4][3]
 
-**Solution:**
-```bash
-# Find process using port 4000
-lsof -ti:4000
+***
 
-# Kill the process
-kill -9 $(lsof -ti:4000)
+## Production Deployment
 
-# Or change port in backend/.env
-PORT=4001
-```
+### Backend
 
-#### 4. **Charts Not Loading**
+- Build and run in production mode:[12][9]
 
-**Error:** Charts show empty or "No data available"
-
-**Solution:**
-- Check browser console (F12) for API errors
-- Verify backend is running: `curl http://localhost:4000/api/elections?limit=1`
-- Clear React Query cache: Hard refresh (Ctrl+Shift+R)
-- Check year filter - ensure at least one year is selected
-
-#### 5. **CSV File Not Found**
-
-**Error:** `FileNotFoundError: All_States_GE.csv`
-
-**Solution:**
-- Download dataset from [Lok Dhaba Portal](https://lokdhaba.ashoka.edu.in/browse-data)
-- Place in `data_preprocessing/All_States_GE.csv`
-- Verify file exists: `ls -lh data_preprocessing/All_States_GE.csv`
-
----
-
-## 🚀 Production Deployment
-
-### Build for Production
-
-**Backend:**
 ```bash
 cd backend
-npm start  # Uses production mode
+npm install
+npm start
 ```
 
-**Frontend:**
-```bash
-cd frontend
-npm run build
-npm run preview  # Test production build locally
-```
+- Example production `.env` (use real secrets in your hosting platform, not in git):[9][12]
 
-### Environment Variables for Production
-
-**Backend (.env):**
 ```env
 NODE_ENV=production
 PORT=4000
-DB_HOST=your-production-db-host
-DB_SSL=true  # Enable for cloud databases
+DB_HOST=your-prod-host
+DB_PORT=5432
+DB_NAME=varahe
+DB_USER=prod_user
+DB_PASSWORD=prod_password
+DB_SSL=true
 ```
 
-**Frontend (.env.production):**
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+npm run preview   # sanity check
+```
+
+
+- Configure:  
+
 ```env
 VITE_API_BASE_URL=https://your-api-domain.com/api
 ```
 
-### Deployment Platforms
+### Hosting Options
 
-- **Backend:** Heroku, Railway, Render, AWS EC2
-- **Frontend:** Vercel, Netlify, GitHub Pages
-- **Database:** AWS RDS, Supabase, Heroku Postgres
+- **Backend**: Render, Railway, Fly.io, AWS EC2, or any Node-friendly PaaS.[12][9]
+- **Database**: Managed Postgres (Supabase, RDS, Render/Neon, etc.).[9][4]
+- **Frontend**: Vercel, Netlify, or static hosting behind a CDN.[13][5]
 
----
+***
 
-## 📄 License
+## License & Acknowledgments
 
-This project is created for educational purposes as part of an Engineering Talent Program assignment.
+- Built for educational purposes as part of an engineering talent program assignment.[15][10]
+- Dataset: Lok Dhaba / TCPD Indian Elections Dataset, Ashoka University.[1][4]
+- India map topology: React Simple Maps compatible India TopoJSON.[5][13]
+- Charts: Recharts-based visualizations customized for this dataset.[14][5]
 
-## 👨‍💻 Author
+**Happy analyzing!** 📊🗳️[2][1]
 
-[Your Name]
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
-
----
-
-## 🙏 Acknowledgments
-
-- Dataset: [Lok Dhaba (TCPD)](https://lokdhaba.ashoka.edu.in/) - Ashoka University
-- India Map TopoJSON: React Simple Maps
-- Charts Library: Recharts
-
----
-
-**Happy Analyzing! 📊🗳️**
-
-## 🛠️ Prerequisites
-
-| Tool | Version (min) | Notes |
-| --- | --- | --- |
-| Node.js + npm | 18+ | Required for both backend and frontend. |
-| PostgreSQL | 14+ | Stores the `election_data` table consumed by the API. |
-| Python | 3.10+ | Used by the optional preprocessing script to clean/import CSV data. |
-
-> Tip: macOS/Linux users can install Node via `nvm` and Postgres via `brew`, `apt`, or Docker. Windows users can rely on the official installers or WSL.
-
-## 🗃️ Prepare the election dataset
-
-1. Download the raw CSV into `data_preprocessing/All_States_GE.csv` (already present if you cloned the data bundle).
-2. (Optional but recommended) Create a Python virtual environment:
-	```bash
-	cd data_preprocessing
-	python -m venv .venv
-	source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-	pip install pandas sqlalchemy psycopg2-binary
-	```
-3. Run the cleaning + import script (update the credentials inside `preprocessing.py` if they differ from your local Postgres user):
-	```bash
-	python preprocessing.py
-	```
-	This produces `cleaned_election_data.csv` and loads it into the `election_data` table of the `varahe` database.
-4. Alternatively, import the CSV manually:
-	```sql
-	\copy election_data FROM 'cleaned_election_data.csv' CSV HEADER;
-	```
-
-Ensure the database user referenced in the backend `.env` has rights to query the table.
-
-## 🚦 Running everything locally
-
-1. **Backend API**
-	```bash
-	cd backend
-	cp .env.example .env  # edit DB_* values if needed
-	npm install
-	npm run dev
-	```
-	The server boots on `http://localhost:4000` (configurable via `PORT`). Use `npm start` for a production-style run.
-
-2. **Frontend dashboard** (in a second terminal)
-	```bash
-	cd frontend
-	npm install
-	echo "VITE_API_BASE_URL=http://localhost:4000/api" > .env.local  # optional override
-	npm run dev
-	```
-	Visit `http://localhost:5173`. The dashboard automatically proxies requests to the backend URL specified by `VITE_API_BASE_URL`.
-
-3. **Health check**
-	- Hit `http://localhost:4000/api/elections?limit=1` to confirm the API can read Postgres.
-	- Load the dashboard and tweak filters to ensure charts/table refresh.
-
-4. **Production builds**
-	```bash
-	cd backend && npm start             # uses compiled Node runtime
-	cd frontend && npm run build && npm run preview
-	```
-
-## Varahe Election Analytics Backend
-
-This repository contains a PostgreSQL-backed Node.js API that powers an interactive dashboard for Indian General Election insights. The backend exposes filterable and aggregated election metrics for rapid visualization and analysis.
-
-### 📦 Tech Stack
-- Node.js + Express 5
-- PostgreSQL (`pg` connection pool)
-- Joi for request validation
-- CORS-enabled JSON APIs
-
-### 🚀 Quickstart
-```bash
-cd backend
-cp .env.example .env  # or create manually if you deploy elsewhere
-npm install
-npm run dev
-```
-
-The API listens on `http://localhost:4000` by default. Adjust `.env` for database credentials (defaults match the provided `varahe` database). Key environment variables:
-
-```
-PORT=4000
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_USER=varahe_user
-DB_PASSWORD=change_me
-DB_NAME=varahe
-DB_SSL=false
-```
-
-### 🔌 Available Endpoints (all prefixed with `/api`)
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/elections` | Paginated election records with filters for year, state, party, sex, and constituency. |
-| GET | `/turnout/by-state` | Average turnout percentage grouped by state for a year or range. |
-| GET | `/party/seat-share` | Seats won per party per year (winners only). |
-| GET | `/gender/representation` | Candidate share (%) by sex per election year. |
-| GET | `/margin-distribution` | Histogram buckets describing victory margins. |
-| GET | `/search/candidates` | Candidate lookup with full performance history. |
-
-### 🧪 Example Requests
-```bash
-curl 'http://localhost:4000/api/elections?year=2019&state_name=Karnataka&limit=20'
-
-curl 'http://localhost:4000/api/turnout/by-state?year=2004-2019'
-
-curl 'http://localhost:4000/api/search/candidates?q=Gandhi&limit=25'
-```
-
-Each endpoint responds with structured JSON including metadata (pagination or year range) plus the requested data payload. Detailed inline comments in the controllers (`backend/src/controllers`) highlight the SQL queries and expected response shapes.
-
-### 🛡️ Validation & Security
-- All parameters are validated and sanitized with Joi before hitting the database.
-- Queries use bound parameters to block SQL injection.
-- Errors are normalized through custom middleware for consistent client handling.
-
-### 🗂️ Project Structure (backend)
-```
-src/
-	app.js               # Express app wiring
-	server.js            # Bootstrap + DB readiness check
-	config/              # Environment configuration
-	controllers/         # Business logic & SQL
-	routes/              # Express routers per feature set
-	middleware/          # Validation & error handlers
-	utils/               # Filter + pagination helpers
-	validation/          # Joi schemas
-```
-
-### ✅ Next Steps
-- Plug the API into the visualization frontend.
-- Add caching or materialized views if aggregate queries become heavy.
-- Layer in automated tests (Jest or node:test) for controllers and utilities.
-
-Happy hacking!
-
----
-
-## Varahe Election Analytics Frontend
-
-The `/frontend` directory hosts a Vite-powered React 18 dashboard that consumes the backend APIs to provide rich visual analytics, filtering, and search utilities.
-
-### 🧰 Frontend Stack
-- React 18 with functional components & hooks
-- Vite for dev/build
-- React Query for API caching
-- Recharts for all visualizations
-- React Select for multi-select controls
-- Custom context for global filter state
-
-### ▶️ Running the dashboard
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The dev server defaults to `http://localhost:5173` and expects the backend API at `http://localhost:4000`. Override via `.env` or `VITE_API_BASE_URL` if needed.
-
-### 🧭 Key UI Building Blocks
-| Component | Purpose |
-| --- | --- |
-| `FilterPanel` | Year sliders, multi-selects for state/party, gender chips, constituency search, winners toggle. |
-| `PartySeatShareChart` | Stacked bars for seats won per party/year. |
-| `TurnoutChart` | Horizontal bars summarizing state-level turnout. |
-| `GenderRepresentationChart` | Line chart showing male/female/unknown candidate share over time. |
-| `MarginDistributionChart` | Histogram buckets for margin-of-victory analysis. |
-| `VoteShareChart` | Donut chart of top parties by vote share (derived from filtered results). |
-| `ConstituencyResultsTable` | Paginated, sortable table synced with active filters. |
-| `CandidateSearch` | Debounced lookup with full performance history cards. |
-
-All charts automatically refetch when the year filter changes, while the table, vote-share chart, and search respect the entire filter state for drill-down workflows.
-
-### 📱 Responsiveness & Accessibility
-- CSS grid/flex layouts adapt from widescreen dashboards down to phones.
-- Keyboard-focusable controls (chips, toggles, dropdowns) plus semantic status messaging for loading/error states.
-- React Query handles request deduping, caching, retries, and inline spinners.
-
-### 🧩 Environment variables
-- `VITE_API_BASE_URL` (default `http://localhost:4000/api`) – set this when hosting backend separately.
-
-With both backend and frontend running, you’ll have an end-to-end analytics experience for the Indian General Elections dataset.
